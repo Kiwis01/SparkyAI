@@ -31,7 +31,8 @@ class ASUWebScraper:
             self.chrome_options.binary_location = '/usr/bin/google-chrome-stable'  # Standard Linux path
         elif 'microsoft' in platform.uname().release.lower():  # WSL detection
             self.chrome_options.binary_location = '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe'
-            
+        elif platform.system() == 'Darwin':
+            self.chrome_options.binary_location = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
             
         try:
             # Get Chrome version (3rd element in output)
@@ -48,8 +49,8 @@ class ASUWebScraper:
             
             logger.info(f"@web_scrape.py Chrome: {chrome_version}, Chromedriver: {driver_version}")
             # bypass this by commenting out the next line
-            if chrome_version != driver_version:
-                raise RuntimeError(f"@web_scrape.py Mismatch: Chrome {chrome_version} vs Driver {driver_version}")
+            # if chrome_version != driver_version:
+            #     raise RuntimeError(f"@web_scrape.py Mismatch: Chrome {chrome_version} vs Driver {driver_version}")
                 
         except IndexError as e:
             logger.error(f"@web_scrape.py Version parsing failed. Raw output:\nChrome: {chrome_out}\nDriver: {driver_out}")
@@ -341,7 +342,7 @@ class ASUWebScraper:
                                         ActionChains(self.driver).move_to_element(element).click().perform()
                                         self.logger.info(" @web_scrape.py \nMoved and clicked successfully")
                                     except Exception:
-                                        raise Exception(f"Failed to click element after {max_attempts} attempts")
+                                        self.logger.error(f"Failed to click element after {max_attempts} attempts")
                         return False
                     
                     # Check if the job type is in the first level of buttons (Full-Time, Part-Time)
@@ -359,7 +360,7 @@ class ASUWebScraper:
                             force_click_element(self.driver, job_type_button)
                             self.logger.info(" @web_scrape.py \nSelect job type")
                         except Exception:
-                            raise Exception(f"Failed to click job type button: {job_type}")
+                            self.logger.info(f"Failed to click job type button: {job_type}")
                     else:
                         # For nested job types, click More button first
                         try:
@@ -382,7 +383,7 @@ class ASUWebScraper:
                             force_click_element(self.driver, job_type_button)
                             self.logger.info(" @web_scrape.py \nSelect Job type")
                         except Exception:
-                            raise Exception(f"Failed to click job type button: {job_type}")
+                            self.logger.info(f"Failed to click job type button: {job_type}")
                     
                 
                 self.logger.info(" @web_scrape.py \nClicked on all filters")
@@ -611,7 +612,6 @@ class ASUWebScraper:
                     
                 except Exception as e:
                     self.logger.error(f"@web_scrape.py Error processing course {e}")
-                    raise e
 
                     
                 formatted_courses = []
@@ -1009,8 +1009,8 @@ class ASUWebScraper:
                         except Exception as e:
                             self.logger.info(f"@web_scrape.py Status cell HTML: {status_cell.get_attribute('outerHTML')}")
                             self.logger.error(f"@web_scrape.py Error extracting library status: {e}")
-                            raise
-                            break
+                            
+                        
 
                         # Append to results
                         library_result = {
@@ -1084,7 +1084,6 @@ class ASUWebScraper:
                         'metadata': {
                             'url': url,
                             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                            'source_type': 'asu_web_scrape',
                         }
                     })
             except Exception as e:
@@ -1566,9 +1565,7 @@ class ASUWebScraper:
                                         time.sleep(1)
                                     except Exception as filter_error:
                                         self.logger.warning(f"@web_scrape.py Could not apply filter {param}: {filter_error}")
-                                        raise Exception(f"Could not apply filter {param}: {filter_error}")
-                            
-                            # Click search button with multiple retry mechanism
+                                        pass  # Click search button with multiple retry mechanism
                             search_button_selectors = ['input[type="submit"]', 'button[type="submit"]', '.search-button']
                             for selector in search_button_selectors:
                                 try:
@@ -1582,7 +1579,7 @@ class ASUWebScraper:
                                     break
                                 except Exception as e:
                                     self.logger.warning(f"@web_scrape.py Search button click failed for selector {selector}: {e}")
-                                    raise Exception(f"Search button click failed for selector {selector}: {e}")
+                                    self.logger.error(f"Search button click failed for selector {selector}: {e}")
                         
                         # Extract scholarship links with improved URL construction
                         link_selectors = {
@@ -1627,6 +1624,8 @@ class ASUWebScraper:
                 if 'https://app.joinhandshake.com/stu/postings' in search_url or 'lib.asu.edu' in search_url or "asu.libcal.com" in search_url or "asu-shuttles.rider.peaktransit.com" in search_url:                    
                     self.logger.info(f"@web_scrape.py Searching for ASU Handshake links {search_url}")
                     await self.scrape_content(search_url, selenium=True, optional_query=optional_query)
+                
+                
                 # finally:
                 #     self.driver.quit()
  
